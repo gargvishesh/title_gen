@@ -46,7 +46,7 @@ class TreeNode:
             new_node.parent = self
             new_node.indent = indent
             self.children.append(new_node)
-            print "Parent:", self.name, "Child:", name 
+            #print "Parent:", self.name, "Child:", name 
             return new_node
         else:
             return self.parent.insert_phrase_node(name, indent)
@@ -60,7 +60,7 @@ class TreeNode:
         new_node.name = name    
         new_node.parent = self
         self.children.append(new_node)
-        print "Parent:", self.name, "Child:", name 
+        #print "Parent:", self.name, "Child:", name 
         return new_node
     
     def insert_leaf_node(self, name):
@@ -70,27 +70,35 @@ class TreeNode:
         new_node.type = TYPE_LEAF
         new_node.name = name    
         new_node.parent = self
-        print "Parent:", self.name, "Child:", name 
+        #print "Parent:", self.name, "Child:", name 
         self.children.append(new_node)
+        return new_node
         
-            
 def leafify(name):
     while name[-1] == ')':
         name = name[:-1]
     return name
 
 
-        
-def make_tree():    
+'''
+Constructs a tree by parsing the indented output dump from stanford_PCFG_parser.
+Also keeps track of where it found the search_string that was passed as argument 
+to this function
+and returns a pointer to that node for future use.
+'''
+def make_tree(search_string):    
     x=TreeNode()
+    ROOT=x
+    search_string_found = 0
+    return_keyword_node = None
     f = open("/home/dsluser/tmp","r") #opens file with name of "test.txt"
     myList = []
 
     for line in f:
         myList.append(line)
 
-    for line in myList:
-        print line
+    #for line in myList:
+        #print line
 
     for line in myList:
         line_indent =  (len(line) - len(line.lstrip()) )
@@ -115,13 +123,56 @@ def make_tree():
                 '''Note: shouldn't update x itself, otherwise the next child of 
                 parent phrase of this POS will get messed up'''
                 POS_node = x.insert_POS_node(keyword)
-                POS_node.insert_leaf_node(leafify(word_list[1][:-1]))
+                keyword = leafify(word_list[1][:-1])
+                leaf_node = POS_node.insert_leaf_node(keyword)
+                #Convert both strings to lower case before checking
+                if (search_string_found == 0 and keyword.lower().find(search_string.lower()) > -1 ):
+                    search_string_found = 1
+                    return_keyword_node = leaf_node
                 word_list = word_list[2:]
 
 
 
-    print"=====End of Orig====="
+    return (ROOT, return_keyword_node)
+    
+def print_tree(root):
+    if (root.type == TYPE_LEAF):
+        print root.name
+    else:
+        for child in root.children:
+            print_tree(child)
 
-make_tree()
+def find_ancestor(keyword_node):
+    #We have to go to phrase node. Hence jump 2 parents
+    current_node = keyword_node.parent.parent;
+    while(keyword_node != None):
+        found_NP = 0;
+        found_VP = 0;
+        for child in current_node.children:
+            if child.name == "NP":
+                found_NP = 1
+                node_NP = child
+                break
+        for child in current_node.children:
+            if child.name == "VP":
+                found_VP = 1
+                node_VP = child
+                break
+        if (found_NP == 1 and found_VP == 1):
+            print current_node.name
+            return current_node
+        current_node = current_node.parent
+    
+    
+        
+        
+search_term = "exist"
+(ROOT, keyword_node) = make_tree(search_term)
+if (keyword_node != None):
+    print keyword_node.name
+    ancestor = find_ancestor(keyword_node)
+    print_tree(ancestor)
+else:
+    print "Keyword Not Found"
+#print_tree(ROOT)
 
-###Vishesh: Closing comment - :: is a leaf without a phrase in the same line. This is creating a problem
