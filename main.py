@@ -3,7 +3,7 @@
 # To change this license header, choose License Headers in Project Properties.
 # To change this template file, choose Tools | Templates
 # and open the template in the editor.
-
+import os
 __author__ = "dsluser"
 __date__ = "$22 Feb, 2015 5:11:09 PM$"
 
@@ -13,6 +13,13 @@ TYPE_PHRASE = 0
 TYPE_POS = 1
 TYPE_LEAF = 2
 LEAF = 1
+STANFORD_PARSER_EXEC="/home/dsluser/Desktop/Natural_Language_Processing/stanford-parser-full-2015-01-30/lexparser.sh"
+INPUT_FILE='/home/dsluser/Desktop/Natural_Language_Processing/stanford-parser-full-2015-01-30/input'
+STANFORD_PARSER_INPUT_FILE = '/home/dsluser/Desktop/Natural_Language_Processing/stanford-parser-full-2015-01-30/stanford_parser_input'
+STANFORD_PARSER_OUTPUT_FILE='/home/dsluser/Desktop/Natural_Language_Processing/stanford-parser-full-2015-01-30/stanford_parser_output'
+SEARCH_TERM = "manap"
+
+
 class TreeNode:
     def __init__(self):    
         self.indent = -1
@@ -74,11 +81,32 @@ class TreeNode:
         self.children.append(new_node)
         return new_node
         
-def leafify(name):
+def remove_closing_braces(name):
     while name[-1] == ')':
         name = name[:-1]
     return name
 
+
+'''
+Reads the raw text file and identifies the sentence in which the phrase features.
+Dumps this sentence to a separate file so that the stanford parser can parse it
+and dump its output for further processing
+'''
+def identify_keyword_sentence(search_string):
+    print "Keyword: ",search_string
+    f = open(INPUT_FILE,"r")
+    fout = open(STANFORD_PARSER_INPUT_FILE,"w")
+    for line in f:
+        print line
+        mySentences = line.split('.')
+        for sentence in mySentences:
+            if (sentence.lower().find(search_string.lower()) > -1):
+                fout.write(sentence)
+                print "Keyword sentence found"
+                return
+    
+    print "Keyword sentence not found"
+    
 
 '''
 Constructs a tree by parsing the indented output dump from stanford_PCFG_parser.
@@ -91,12 +119,13 @@ def make_tree(search_string):
     ROOT=x
     search_string_found = 0
     return_keyword_node = None
-    f = open("/home/dsluser/tmp","r") #opens file with name of "test.txt"
+    f = open(STANFORD_PARSER_OUTPUT_FILE,"r") 
+       
     myList = []
 
     for line in f:
         myList.append(line)
-
+    
     #for line in myList:
         #print line
 
@@ -123,7 +152,7 @@ def make_tree(search_string):
                 '''Note: shouldn't update x itself, otherwise the next child of 
                 parent phrase of this POS will get messed up'''
                 POS_node = x.insert_POS_node(keyword)
-                keyword = leafify(word_list[1][:-1])
+                keyword = remove_closing_braces(word_list[1][:-1])
                 leaf_node = POS_node.insert_leaf_node(keyword)
                 #Convert both strings to lower case before checking
                 if (search_string_found == 0 and keyword.lower().find(search_string.lower()) > -1 ):
@@ -134,7 +163,10 @@ def make_tree(search_string):
 
 
     return (ROOT, return_keyword_node)
-    
+
+'''
+Prints all the leaves of the tree rooted at the root pointed to by the argument
+'''
 def print_tree(root):
     if (root.type == TYPE_LEAF):
         print root.name
@@ -159,20 +191,24 @@ def find_ancestor(keyword_node):
                 node_VP = child
                 break
         if (found_NP == 1 and found_VP == 1):
-            print current_node.name
+            #print current_node.name
             return current_node
         current_node = current_node.parent
     
     
-        
-        
-search_term = "exist"
-(ROOT, keyword_node) = make_tree(search_term)
+identify_keyword_sentence(SEARCH_TERM)
+os.system(STANFORD_PARSER_EXEC+" "+STANFORD_PARSER_INPUT_FILE+"  > "+STANFORD_PARSER_OUTPUT_FILE)             
+
+(ROOT, keyword_node) = make_tree(SEARCH_TERM)
 if (keyword_node != None):
-    print keyword_node.name
+    #print keyword_node.name
     ancestor = find_ancestor(keyword_node)
     print_tree(ancestor)
 else:
-    print "Keyword Not Found"
+    print "Keyword Not Found. Should never reach here since found keyword sentence."
 #print_tree(ROOT)
 
+'''Closing comments 26Feb : Have to also feature an N-gram phrase's common ancestor. 
+For that, I can print the path from root till each keyword node, then find the first 
+node where even one of them diverges. This can be passed as a list to the make_tree
+func and the return value from the func can also be a list which in turn is passed to find_ancestor'''
