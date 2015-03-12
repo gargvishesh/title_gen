@@ -205,7 +205,7 @@ if (keyword_node != None):
     ancestor = find_ancestor(keyword_node)
     print_tree(ancestor)
 else:
-    print "Keyword Not Found. Should never reach here since found keyword sentence."
+    print "Keyword Not Found. Should never reach here since the keyword featured in a sentence."
 #print_tree(ROOT)
 
 '''Closing comments 26Feb : Have to also feature an N-gram phrase's common ancestor. 
